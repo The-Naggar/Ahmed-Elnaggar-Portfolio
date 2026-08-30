@@ -6,6 +6,19 @@ export default function DockPrompt() {
   const activeTrigger = useSceneStore((state) => state.activeTrigger);
   const setCurrentScene = useSceneStore((state) => state.setCurrentScene);
 
+  const handleDockEnter = () => {
+    if (!activeTrigger) return;
+    const dock = DOCKS.find((d) => d.id === activeTrigger);
+    if (dock) {
+      const currentRot = useSceneStore.getState().savedBoatTransform.rotationY;
+      useSceneStore.getState().setBoatTransform({
+        position: [dock.pos[0], 3.5, dock.pos[2]],
+        rotationY: currentRot,
+      });
+    }
+    setCurrentScene(activeTrigger);
+  };
+
   // Attach keydown listener for [E] or [Enter]
   useEffect(() => {
     if (!activeTrigger || currentScene !== "river") return;
@@ -18,7 +31,7 @@ export default function DockPrompt() {
         e.key === " "
       ) {
         e.preventDefault();
-        setCurrentScene(activeTrigger);
+        handleDockEnter();
       }
     };
 
@@ -59,7 +72,7 @@ export default function DockPrompt() {
         userSelect: "none",
         cursor: "pointer",
       }}
-      onClick={() => setCurrentScene(activeTrigger)}
+      onClick={handleDockEnter}
     >
       <style>{`
         @keyframes dockFadeIn {

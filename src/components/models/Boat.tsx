@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useGLTF, Clone } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import OnboardingDialog from "../OnboardingDialog";
+import { useSceneStore } from "../../utils/useSceneStore";
 
 // ══════════════════════════════════════════════════════════════
 // 🎮 1. KEYBOARD CONTROLS HOOK (WASD & ARROWS)
@@ -54,11 +56,23 @@ function useKeys() {
 const BOAT_PATH = "/3d-models/boat_1.glb";
 const BOAT_BASE_Y = 3.5;
 
+// ── Zero-GC Scratch Vectors for per-frame camera math ──
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const _camOffset = new THREE.Vector3();
+const _targetCamPos = new THREE.Vector3();
+const _lookOffset = new THREE.Vector3();
+const _targetLookAt = new THREE.Vector3();
+
 export default function Boat() {
   const boatRef = useRef<THREE.Group>(null);
   const keys = useKeys();
   const boatData = useGLTF(BOAT_PATH);
 
+  // Retrieve last saved boat position & rotation from store
+  const savedTransform = useSceneStore((state) => state.savedBoatTransform);
+  const isFirstFrame = useRef(true);
+
+  // Initialize camera refs from saved transform
   const cameraPosRef = useRef(new THREE.Vector3(0, 16.5, 288));
   const cameraLookAtRef = useRef(new THREE.Vector3(0, 4, 220));
 
@@ -68,6 +82,25 @@ export default function Boat() {
 
   useFrame((state, delta) => {
     if (!boatRef.current) return;
+
+    // 0. FIRST FRAME INITIALIZATION (Instantly snap camera & boat to saved transform)
+    if (isFirstFrame.current) {
+      isFirstFrame.current = false;
+      const cur = useSceneStore.getState().savedBoatTransform;
+      boatRef.current.position.set(cur.position[0], cur.position[1], cur.position[2]);
+      boatRef.current.rotation.set(0, cur.rotationY, 0);
+
+      _camOffset.set(0, 13, 48).applyAxisAngle(Y_AXIS, cur.rotationY);
+      _targetCamPos.copy(boatRef.current.position).add(_camOffset);
+      cameraPosRef.current.copy(_targetCamPos);
+
+      _lookOffset.set(0, 3.5, -20).applyAxisAngle(Y_AXIS, cur.rotationY);
+      _targetLookAt.copy(boatRef.current.position).add(_lookOffset);
+      cameraLookAtRef.current.copy(_targetLookAt);
+
+      state.camera.position.copy(_targetCamPos);
+      state.camera.lookAt(_targetLookAt);
+    }
 
     // 1. DRIVING MECHANICS (Relative to Boat Heading)
     if (keys.forward) {
@@ -99,49 +132,42 @@ export default function Boat() {
     boatRef.current.position.x = Math.max(-52, Math.min(52, boatRef.current.position.x));
     boatRef.current.position.z = Math.max(-420, Math.min(260, boatRef.current.position.z));
 
-    // 4. DESTINATION TRIGGER ZONES
-    const pos = boatRef.current.position;
+    // 4. CONTINUOUS STORE SYNCHRONIZATION (Guarantees position is never lost on unmount)
+    const storeTransform = useSceneStore.getState().savedBoatTransform;
+    storeTransform.position[0] = boatRef.current.position.x;
+    storeTransform.position[1] = boatRef.current.position.y;
+    storeTransform.position[2] = boatRef.current.position.z;
+    storeTransform.rotationY = boatRef.current.rotation.y;
 
-    // Zone 1: OVERVIEW Building (Z ~ 50, Left Bank X < -35)
-    if (pos.z < 90 && pos.z > 10 && pos.x < -35) {
-      // Trigger Overview hub
-    }
-    // Zone 2: PROJECTS Building (Z ~ -80, Right Bank X > 35)
-    if (pos.z < -40 && pos.z > -120 && pos.x > 35) {
-      // Trigger Projects hub
-    }
-    // Zone 3: SKILLS Building (Z ~ -210, Left Bank X < -35)
-    if (pos.z < -170 && pos.z > -250 && pos.x < -35) {
-      // Trigger Skills hub
-    }
-    // Zone 4: EXPERIENCE Building (Z ~ -310, Right Bank X > 35)
-    // 5. DEDICATED CINEMATIC BOAT CHASE CAMERA (Always Active)
+    // 5. ZERO-GC DEDICATED CINEMATIC BOAT CHASE CAMERA (Always Active)
     const boatPos = boatRef.current.position;
     const boatRotY = boatRef.current.rotation.y;
-    const yAxis = new THREE.Vector3(0, 1, 0);
 
-    // Ideal camera position behind the boat along its heading
-    const camOffset = new THREE.Vector3(0, 13, 48);
-    camOffset.applyAxisAngle(yAxis, boatRotY);
-    const targetCamPos = boatPos.clone().add(camOffset);
+    // Ideal camera position behind the boat along its heading (in-place mutation)
+    _camOffset.set(0, 13, 48).applyAxisAngle(Y_AXIS, boatRotY);
+    _targetCamPos.copy(boatPos).add(_camOffset);
 
-    // Ideal camera target point ahead of the boat bow
-    const lookOffset = new THREE.Vector3(0, 3.5, -20);
-    lookOffset.applyAxisAngle(yAxis, boatRotY);
-    const targetLookAt = boatPos.clone().add(lookOffset);
+    // Ideal camera target point ahead of the boat bow (in-place mutation)
+    _lookOffset.set(0, 3.5, -20).applyAxisAngle(Y_AXIS, boatRotY);
+    _targetLookAt.copy(boatPos).add(_lookOffset);
 
     // Smooth interpolation (lerp)
     const lerpRate = Math.min(delta * 5.0, 0.18);
-    cameraPosRef.current.lerp(targetCamPos, lerpRate);
-    cameraLookAtRef.current.lerp(targetLookAt, lerpRate * 1.2);
+    cameraPosRef.current.lerp(_targetCamPos, lerpRate);
+    cameraLookAtRef.current.lerp(_targetLookAt, lerpRate * 1.2);
 
     state.camera.position.copy(cameraPosRef.current);
     state.camera.lookAt(cameraLookAtRef.current);
   });
 
   return (
-    // Start the player boat at the far upstream river entrance: [0, 3.5, 240]
-    <group ref={boatRef} name="player-boat" position={[0, BOAT_BASE_Y, 240]} rotation={[0, 0, 0]}>
+    // Spawn player boat at its current/saved Nile location
+    <group
+      ref={boatRef}
+      name="player-boat"
+      position={savedTransform.position}
+      rotation={[0, savedTransform.rotationY, 0]}
+    >
       {/* 1. The Boat Model (Flipped 180° so bow points forward) */}
       <Clone
         object={boatData.scene}
@@ -156,29 +182,36 @@ export default function Boat() {
           <cylinderGeometry args={[0.3, 0.4, 1.2, 12]} />
           <meshStandardMaterial color="#1e293b" roughness={0.7} />
         </mesh>
+        {/* Warm Golden Emissive Lantern Sphere */}
         <mesh position={[0, 1, 1]}>
           <sphereGeometry args={[0.26, 12, 12]} />
-          <meshStandardMaterial color="#fcd34d" roughness={0.5} />
+          <meshStandardMaterial
+            color="#fbbf24"
+            emissive="#fbbf24"
+            emissiveIntensity={3.2}
+            toneMapped={false}
+            roughness={0.3}
+          />
         </mesh>
       </group>
 
-      {/* 3. Warm Atmospheric Boat Lantern Glow */}
-      <pointLight
-        position={[0, 2.5, -1.0]}
-        color="#fbbf24"
-        intensity={3.5}
-        distance={28}
-        decay={1.8}
+      {/* 3. Onboarding RPG Tutorial Dialog (Floating directly above captain) */}
+      <OnboardingDialog
+        position={[5, 15, 3.0]}
+        isCruising={keys.forward || keys.backward || keys.left || keys.right}
       />
 
-      {/* 4. Forward Navigation Light (Illuminates water ahead of boat) */}
-      <pointLight
-        position={[0, 1.8, -4.5]}
-        color="#e0f2fe"
-        intensity={2.5}
-        distance={35}
-        decay={1.6}
-      />
+      {/* 4. Forward Navigation Bow Light Mesh (Bloom reactive) */}
+      <mesh position={[0, 1.8, -4.5]}>
+        <sphereGeometry args={[0.25, 12, 12]} />
+        <meshStandardMaterial
+          color="#e0f2fe"
+          emissive="#e0f2fe"
+          emissiveIntensity={3.5}
+          toneMapped={false}
+          roughness={0.2}
+        />
+      </mesh>
     </group>
   );
 }

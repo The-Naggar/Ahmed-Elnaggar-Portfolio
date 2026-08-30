@@ -166,14 +166,20 @@ export default function ShishWindow({
         {`[ ${title} ]`}
       </AnimatedText>
 
-      {/* INTERIOR HTML CONTENT (Blooms outward & expands 1.5x when hovered) */}
+      {/* INTERIOR HTML CONTENT (Blooms outward & expands 1.5x when hovered, occluded/culled when inactive) */}
       <a.group position-z={cardZ} scale={cardScale}>
         <Html
           position={[0, 0, 0]}
           transform
           center
+          occlude="blending"
           zIndexRange={[100, 0]}
           pointerEvents={hovered ? "auto" : "none"}
+          style={{
+            transition: "opacity 0.25s ease",
+            opacity: hovered ? 1 : 0,
+            visibility: hovered ? "visible" : "hidden",
+          }}
         >
           <aWeb.div
             style={{

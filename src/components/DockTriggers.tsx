@@ -32,25 +32,17 @@ function DockBuoy({ pos }: { pos: [number, number, number] }) {
         <meshStandardMaterial color="#d4af37" roughness={0.35} metalness={0.8} />
       </mesh>
 
-      {/* 3. Luminous Gold Top Sphere / Lantern */}
+      {/* 3. Luminous Gold Top Sphere / Lantern (Bloom-reactive emissive) */}
       <mesh position={[0, 2.7, 0]}>
         <sphereGeometry args={[0.45, 16, 16]} />
         <meshStandardMaterial
           color="#fbbf24"
           emissive="#fbbf24"
-          emissiveIntensity={1.8}
+          emissiveIntensity={3.2}
+          toneMapped={false}
           roughness={0.2}
         />
       </mesh>
-
-      {/* 4. Warm Point Light Emitting from Buoy */}
-      <pointLight
-        position={[0, 3.2, 0]}
-        color="#d4af37"
-        intensity={2}
-        distance={25}
-        decay={1.8}
-      />
     </group>
   );
 }

@@ -1,77 +1,114 @@
-import { useGLTF, Clone } from "@react-three/drei";
+import { useEffect, useRef, useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
+import * as THREE from "three";
 
 const STREETLIGHT_PATH = "/3d-models/streetlights.glb";
 
-// ══════════════════════════════════════════════════════════════
-// 💡 ROAD LIGHT CONTROLS - Easily customize coordinates & lighting
-// ══════════════════════════════════════════════════════════════
-export const ROAD_LIGHT_CONFIG = {
-  // LEFT ROAD LIGHT POSITION:
-  // - x: position across the road (default -80 centers on the road lanes)
-  // - y: height above ground (default 2.5 sits right above road & cars)
-  // - zOffset: offset along the road relative to each streetlight
-  leftPosition: { x: -65, y: 10, zOffset: 0 },
-
-  // RIGHT ROAD LIGHT POSITION:
-  // - x: position across the road (default 80 centers on the road lanes)
-  // - y: height above ground (default 2.5 sits right above road & cars)
-  // - zOffset: offset along the road relative to each streetlight
-  rightPosition: { x: 65, y: 10, zOffset: 0 },
-
-  // LIGHT PROPERTIES:
-  color: "#ffcc77", // Warm amber streetlight color
-  intensity: 30,     // Brightness of the road light
-  distance: 35,     // Reach of the light on road and passing cars
-  decay: .6,         // Light falloff rate
-};
-
 export default function Streetlights() {
   const { scene } = useGLTF(STREETLIGHT_PATH);
+  const lampCount = 26; // 13 left + 13 right
 
-  // Generate an array of Z positions spacing every 60 units down to Z=-420
-  const lampPositions = Array.from({ length: 13 }).map((_, i) => 300 - i * 60);
+  // Extract all unique child meshes from the streetlight GLB
+  const meshes = useMemo(() => {
+    const list: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = [];
+    scene.traverse((child: any) => {
+      if (child.isMesh && child.geometry && child.material) {
+        list.push({
+          geometry: child.geometry,
+          material: child.material,
+        });
+      }
+    });
+    return list;
+  }, [scene]);
+
+  const instancedMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  const bulbInstancedRef = useRef<THREE.InstancedMesh | null>(null);
+
+  // Pre-calculate matrices for the 26 streetlights and their glowing bulbs
+  useEffect(() => {
+    const dummy = new THREE.Object3D();
+    const bulbDummy = new THREE.Object3D();
+    const lampPositions = Array.from({ length: 13 }).map((_, i) => 300 - i * 60);
+
+    let instanceIdx = 0;
+
+    lampPositions.forEach((z) => {
+      // 1. LEFT CORNICHE STREETLIGHT
+      dummy.position.set(-65, 1, z);
+      dummy.rotation.set(0, -Math.PI / 2, 0);
+      dummy.scale.set(2, 2, 2);
+      dummy.updateMatrix();
+
+      // Glowing bulb position (matching lamp fixture head)
+      bulbDummy.position.set(-80, 20, z);
+      bulbDummy.scale.set(0.65, 0.65, 0.65);
+      bulbDummy.updateMatrix();
+
+      instancedMeshRefs.current.forEach((meshRef) => {
+        if (meshRef) meshRef.setMatrixAt(instanceIdx, dummy.matrix);
+      });
+      if (bulbInstancedRef.current) {
+        bulbInstancedRef.current.setMatrixAt(instanceIdx, bulbDummy.matrix);
+      }
+      instanceIdx++;
+
+      // 2. RIGHT CORNICHE STREETLIGHT
+      dummy.position.set(65, 1, z);
+      dummy.rotation.set(0, Math.PI / 2, 0);
+      dummy.scale.set(2, 2, 2);
+      dummy.updateMatrix();
+
+      bulbDummy.position.set(80, 20, z);
+      bulbDummy.scale.set(0.65, 0.65, 0.65);
+      bulbDummy.updateMatrix();
+
+      instancedMeshRefs.current.forEach((meshRef) => {
+        if (meshRef) meshRef.setMatrixAt(instanceIdx, dummy.matrix);
+      });
+      if (bulbInstancedRef.current) {
+        bulbInstancedRef.current.setMatrixAt(instanceIdx, bulbDummy.matrix);
+      }
+      instanceIdx++;
+    });
+
+    instancedMeshRefs.current.forEach((meshRef) => {
+      if (meshRef) meshRef.instanceMatrix.needsUpdate = true;
+    });
+    if (bulbInstancedRef.current) {
+      bulbInstancedRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [meshes]);
 
   return (
-    <group>
-      {lampPositions.map((z, index) => (
-        <group key={`lamp-${index}`}>
-          {/* ── LEFT CORNICHE STREETLIGHT MODEL ── */}
-          <group position={[-60.5, 0, z]} rotation={[0, Math.PI / 2, 0]}>
-            <Clone object={scene} scale={[3, 3, 3]} position={[0, 1, 0]} />
-          </group>
-
-          {/* 💡 LEFT ROAD GROUND LIGHT (Illuminates road surface & passing cars) */}
-          <pointLight
-            position={[
-              ROAD_LIGHT_CONFIG.leftPosition.x,
-              ROAD_LIGHT_CONFIG.leftPosition.y,
-              z + ROAD_LIGHT_CONFIG.leftPosition.zOffset,
-            ]}
-            intensity={ROAD_LIGHT_CONFIG.intensity}
-            distance={ROAD_LIGHT_CONFIG.distance}
-            color={ROAD_LIGHT_CONFIG.color}
-            decay={ROAD_LIGHT_CONFIG.decay}
-          />
-
-          {/* ── RIGHT CORNICHE STREETLIGHT MODEL ── */}
-          <group position={[60.5, 0, z]} rotation={[0, -Math.PI / 2, 0]}>
-            <Clone object={scene} scale={[3, 3, 3]} position={[0, 1, 0]} />
-          </group>
-
-          {/* 💡 RIGHT ROAD GROUND LIGHT (Illuminates road surface & passing cars) */}
-          <pointLight
-            position={[
-              ROAD_LIGHT_CONFIG.rightPosition.x,
-              ROAD_LIGHT_CONFIG.rightPosition.y,
-              z + ROAD_LIGHT_CONFIG.rightPosition.zOffset,
-            ]}
-            intensity={ROAD_LIGHT_CONFIG.intensity}
-            distance={ROAD_LIGHT_CONFIG.distance}
-            color={ROAD_LIGHT_CONFIG.color}
-            decay={ROAD_LIGHT_CONFIG.decay}
-          />
-        </group>
+    <group name="corniche-streetlights-instanced">
+      {/* 1. Instanced Streetlight Geometry (1 draw call per submesh) */}
+      {meshes.map((m, idx) => (
+        <instancedMesh
+          key={idx}
+          ref={(el) => {
+            instancedMeshRefs.current[idx] = el;
+          }}
+          args={[m.geometry, m.material, lampCount]}
+          frustumCulled={false}
+        />
       ))}
+
+      {/* 2. Instanced Warm Golden Glowing Lamp Fixture Bulbs (Bloom reactive) */}
+      <instancedMesh
+        ref={bulbInstancedRef}
+        args={[undefined, undefined, lampCount]}
+        frustumCulled={false}
+      >
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial
+          color="#ffcc77"
+          emissive="#ffcc77"
+          emissiveIntensity={3.8}
+          toneMapped={false}
+          roughness={0.2}
+        />
+      </instancedMesh>
     </group>
   );
 }

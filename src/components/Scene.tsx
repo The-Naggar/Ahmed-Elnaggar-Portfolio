@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import Environment from "./Environment";
 import Moon from "./models/Moon";
 import CairoTower from "./models/CairoTower";
@@ -8,8 +9,11 @@ import Traffic from "./models/Traffic";
 import Buildings from "./models/Buildings";
 import Trees from "./models/Trees";
 import DockTriggers from "./DockTriggers";
+import { useSceneStore } from "../utils/useSceneStore";
 
 export default function Scene() {
+  const perfFactor = useSceneStore((state) => state.perfFactor);
+
   return (
     <>
       {/* Lighting, stars, fog & procedural River Nile */}
@@ -57,6 +61,17 @@ export default function Scene() {
       <Suspense fallback={null}>
         <Trees />
       </Suspense>
+
+      {/* ── High-Performance Bloom Post-Processing Pipeline ── */}
+      <EffectComposer enableNormalPass={false} multisampling={0}>
+        <Bloom
+          mipmapBlur
+          luminanceThreshold={0.55}
+          luminanceSmoothing={0.3}
+          intensity={1.25 * perfFactor}
+        />
+      </EffectComposer>
     </>
   );
 }
+

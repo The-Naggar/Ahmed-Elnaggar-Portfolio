@@ -28,24 +28,45 @@ export const DOCKS: DockInfo[] = [
   { id: "overview", title: "01 · The Overview", pos: [-34, 0, 50], radius: 22 },
   // 2. PROJECTS (Right Bank: Building at X=120, Z=-80)
   { id: "projects", title: "02 · The Projects", pos: [34, 0, -80], radius: 22 },
-  // 3. SKILLS (Left Bank: Building at X=-110, Z=-210)
-  { id: "skills", title: "03 · The Skills", pos: [-34, 0, -210], radius: 22 },
+  // 3. SKILLS (Left Bank: Building at X=-110, Z=-260)
+  { id: "skills", title: "03 · The Skills", pos: [-34, 0, -260], radius: 22 },
   // 4. EXPERIENCE (Right Bank: Building at X=120, Z=-310)
   { id: "experience", title: "04 · The Experience", pos: [34, 0, -310], radius: 22 },
   // 5. TOWER / RESUME (River Destination: Tower at X=0, Z=-400)
   { id: "tower", title: "05 · The Resume", pos: [0, 0, -360], radius: 24 },
 ];
 
+export interface BoatTransform {
+  position: [number, number, number];
+  rotationY: number;
+}
+
 interface SceneState {
   currentScene: SceneType;
   activeTrigger: TriggerType;
+  perfFactor: number;
+  savedBoatTransform: BoatTransform;
+  hasSeenOnboarding: boolean;
+  isMapOpen: boolean;
   setCurrentScene: (scene: SceneType) => void;
   setActiveTrigger: (trigger: TriggerType) => void;
+  setPerfFactor: (factor: number) => void;
+  setBoatTransform: (transform: BoatTransform) => void;
+  setHasSeenOnboarding: (seen: boolean) => void;
+  setMapOpen: (isOpen: boolean) => void;
 }
 
 export const useSceneStore = create<SceneState>((set) => ({
   currentScene: "river",
   activeTrigger: null,
+  perfFactor: 1,
+  savedBoatTransform: { position: [0, 3.5, 240], rotationY: 0 },
+  hasSeenOnboarding: false,
+  isMapOpen: false,
   setCurrentScene: (scene) => set({ currentScene: scene }),
   setActiveTrigger: (trigger) => set({ activeTrigger: trigger }),
+  setPerfFactor: (factor) => set({ perfFactor: factor }),
+  setBoatTransform: (transform) => set({ savedBoatTransform: transform }),
+  setHasSeenOnboarding: (seen) => set({ hasSeenOnboarding: seen }),
+  setMapOpen: (isOpen) => set({ isMapOpen: isOpen }),
 }));

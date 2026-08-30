@@ -138,29 +138,25 @@ function LabeledBuilding({
   signPosition,
   signRotation,
   signSize,
-  children,
 }: LabeledBuildingProps) {
   return (
     <group position={position} rotation={rotation}>
       {/* 1. The Building Model */}
       <Clone object={modelScene} scale={scale} />
 
-      {/* 2. Integrated 2D Signboard Rectangle */}
+      {/* 2. Integrated 2D Signboard Rectangle (Bloom-reactive emissive) */}
       <mesh position={signPosition} rotation={signRotation || [0, 0, 0]}>
         <planeGeometry args={signSize} />
         <meshStandardMaterial
           map={signTexture}
           emissiveMap={signTexture}
           emissive="#ffffff"
-          emissiveIntensity={1.2}
+          emissiveIntensity={2.2}
           roughness={0.25}
           metalness={0.1}
           toneMapped={false}
         />
       </mesh>
-
-      {/* 3. Architectural Accent Lighting */}
-      {children}
     </group>
   );
 }
@@ -186,6 +182,26 @@ export default function Buildings() {
     () => createSignTexture("THE", "EXPERIENCE", "04", "#d97706", "#451a03", "#fbbf24"),
     []
   );
+
+  // Hide the background skyscraper / tower meshes from building_2 so only the brick building displays
+  useMemo(() => {
+    b2.scene.traverse((child: any) => {
+      if (child.isMesh) {
+        if (
+          ["Object_9", "Object_11", "Object_59"].includes(child.name) ||
+          ["Object_9", "Object_11", "Object_59"].includes(child.geometry?.name)
+        ) {
+          child.visible = false;
+        }
+        if (child.geometry) {
+          child.geometry.computeBoundingBox();
+          if (child.geometry.boundingBox && child.geometry.boundingBox.max.y > 2.0) {
+            child.visible = false;
+          }
+        }
+      }
+    });
+  }, [b2]);
 
   // Enhance building materials so they catch moonlight and architectural illumination
   useEffect(() => {
@@ -216,83 +232,31 @@ export default function Buildings() {
         signPosition={[22, 80, -18]}
         signRotation={[0, Math.PI / 2, 0]}
         signSize={[37, 7]}
-      >
-        {/* Main Facade & Plaza Illumination */}
-        <pointLight
-          position={[30, 25, 25]}
-          intensity={25}
-          distance={200}
-          color="#bae6fd"
-          decay={1.7}
-        />
-        {/* Rooftop Silhouette Accent */}
-        <pointLight
-          position={[0, 45, -30]}
-
-          intensity={15}
-          distance={150}
-          color="#7dd3fc"
-          decay={1.8}
-        />
-      </LabeledBuilding>
+      />
 
       {/* ── 2. PROJECTS (Right Side: Z = -80) ── */}
       <LabeledBuilding
         modelScene={b2.scene}
-        position={[120, 0.5, -80]}
+        position={[120, -10, -80]}
         rotation={[0, -Math.PI / 2, 0]}
         scale={[35, 35, 35]}
         signTexture={projectsSign}
         signPosition={[20, 78, -40]}
         signRotation={[0, Math.PI / 2, 0]}
         signSize={[82, 11]}
-      >
-        {/* Main Facade Architectural Floodlight */}
-        <pointLight
-          position={[-45, 40, -25]}
-          intensity={30}
-          distance={220}
-          color="#a5f3fc"
-          decay={1.7}
-        />
-        {/* Upper Tower Shaft & Crown Illumination */}
-        <pointLight
-          position={[0, 75, 0]}
-          intensity={20}
-          distance={180}
-          color="#5eead4"
-          decay={1.8}
-        />
-      </LabeledBuilding>
+      />
 
       {/* ── 3. SKILLS (Left Side: Z = -210) ── */}
       <LabeledBuilding
         modelScene={b2.scene}
-        position={[-110, 0.5, -210]}
+        position={[-130, -10, -260]}
         rotation={[0, Math.PI / 2, 0]}
         scale={[35, 35, 35]}
         signTexture={skillsSign}
         signPosition={[-62, 78, -40]}
         signRotation={[0, -Math.PI / 2, 0]}
         signSize={[82, 11]}
-      >
-        {/* Main Facade Architectural Floodlight */}
-        <pointLight
-          position={[-45, 40, -25]}
-          intensity={32}
-          distance={240}
-          color="#c7d2fe"
-          decay={1.7}
-        />
-        {/* Upper Tower Shaft & Crown Illumination */}
-        <pointLight
-          position={[0, 75, 0]}
-          intensity={22}
-          distance={190}
-          color="#a78bfa"
-          decay={1.8}
-        />
-      </LabeledBuilding>
+      />
 
       {/* ── 4. EXPERIENCE (Right Side, Closest to Tower: Z = -310) ── */}
       <LabeledBuilding
@@ -304,24 +268,7 @@ export default function Buildings() {
         signPosition={[35, 128, -27]}
         signRotation={[0, Math.PI / 2, 0]}
         signSize={[58, 8]}
-      >
-        {/* Strong Road & Facade Architectural Floodlight */}
-        <pointLight
-          position={[35, 30, -30]}
-          intensity={35}
-          distance={240}
-          color="#fef08a"
-          decay={1.7}
-        />
-        {/* Rooftop Silhouette Accent */}
-        <pointLight
-          position={[0, 50, 0]}
-          intensity={20}
-          distance={180}
-          color="#fed7aa"
-          decay={1.8}
-        />
-      </LabeledBuilding>
+      />
     </group>
   );
 }

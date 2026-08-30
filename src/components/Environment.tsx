@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from "react";
 import { useFrame, extend } from "@react-three/fiber";
-import { useTexture, Stars } from "@react-three/drei";
+import { useTexture, Stars, Environment as DreiEnvironment } from "@react-three/drei";
 import * as THREE from "three";
 import { Water } from "three-stdlib";
 
@@ -15,7 +15,7 @@ declare module "@react-three/fiber" {
 export default function Environment() {
   const waterRef = useRef<any>(null);
   const waterNormals = useTexture(
-    "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/waternormals.jpg",
+    "/waternormals.jpg",
     (texture) => {
       if (texture instanceof THREE.Texture) {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -52,6 +52,9 @@ export default function Environment() {
       {/* Atmospheric distance fog preserving visibility of distant buildings & tower */}
       <fog attach="fog" args={["#02040b", 320, 680]} />
 
+      {/* Built-in procedural night environment for rich water reflections & ambient fill (0 byte asset overhead) */}
+      <DreiEnvironment preset="night" environmentIntensity={0.55} />
+
       {/* Night Sky Stars */}
       <Stars
         radius={350}
@@ -64,7 +67,7 @@ export default function Environment() {
       />
 
       {/* Ambient nocturnal fill light for building visibility */}
-      <ambientLight intensity={1.6} color="#25334a" />
+      <ambientLight intensity={1.4} color="#25334a" />
 
       {/* Main Moonlight Directional Beam coming from the Moon towards the river */}
       <directionalLight
@@ -78,22 +81,6 @@ export default function Environment() {
         position={[0, 35, 50]}
         intensity={1}
         color="#cbd5e1"
-      />
-
-      {/* Shimmering Moonlight Water Reflection Point Lights */}
-      <pointLight
-        position={[-10, 8, -150]}
-        intensity={4.0}
-        color="#cce0ff"
-        distance={250}
-        decay={1.2}
-      />
-      <pointLight
-        position={[-5, 5, -50]}
-        intensity={2.5}
-        color="#dbeafe"
-        distance={150}
-        decay={1.3}
       />
 
       {/* ── 1. RIVER BASIN (120 width x 740 length, strictly contained between seawalls) ── */}
@@ -158,50 +145,6 @@ export default function Environment() {
         <boxGeometry args={[0.4, 0.05, 740]} />
         <meshBasicMaterial color="#ffffff" opacity={0.4} transparent />
       </mesh>
-
-      {/* Warm Corniche City Glow lights along riverbanks */}
-      <pointLight
-        position={[-58, 3, -30]}
-        intensity={1.8}
-        color="#fbbf24"
-        distance={50}
-        decay={1.8}
-      />
-      <pointLight
-        position={[-58, 3, -150]}
-        intensity={1.8}
-        color="#f59e0b"
-        distance={60}
-        decay={1.8}
-      />
-      <pointLight
-        position={[-58, 3, -280]}
-        intensity={2.0}
-        color="#f59e0b"
-        distance={70}
-        decay={1.8}
-      />
-      <pointLight
-        position={[58, 3, -30]}
-        intensity={1.8}
-        color="#f59e0b"
-        distance={50}
-        decay={1.8}
-      />
-      <pointLight
-        position={[58, 3, -150]}
-        intensity={1.8}
-        color="#fbbf24"
-        distance={60}
-        decay={1.8}
-      />
-      <pointLight
-        position={[58, 3, -280]}
-        intensity={2.0}
-        color="#fbbf24"
-        distance={70}
-        decay={1.8}
-      />
     </>
   );
 }
@@ -232,11 +175,11 @@ function RoadDashes() {
 
   return (
     <>
-      <instancedMesh ref={leftMeshRef} args={[undefined, undefined, dashCount]}>
+      <instancedMesh ref={leftMeshRef} args={[undefined, undefined, dashCount]} frustumCulled={false}>
         <boxGeometry args={[0.4, 0.05, 4]} />
         <meshBasicMaterial color="#ffffff" opacity={0.5} transparent />
       </instancedMesh>
-      <instancedMesh ref={rightMeshRef} args={[undefined, undefined, dashCount]}>
+      <instancedMesh ref={rightMeshRef} args={[undefined, undefined, dashCount]} frustumCulled={false}>
         <boxGeometry args={[0.4, 0.05, 4]} />
         <meshBasicMaterial color="#ffffff" opacity={0.5} transparent />
       </instancedMesh>
