@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGLTF, Clone } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
