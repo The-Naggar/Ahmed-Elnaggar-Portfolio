@@ -143,7 +143,7 @@ export default function ProjectsScene() {
             <p style={{ margin: 0, fontSize: "14px", fontStyle: "italic" }}>
               <strong>Highlight:</strong> Engineered custom 3D mechanical shaders, interactive physics, and decoupled cinematic UI overlays.
             </p>
-            <GitHubLink url="https://github.com/The-Naggar/my-portofolio.git" />
+            <GitHubLink url="https://github.com/The-Naggar/Ahmed-Elnaggar-Portfolio" />
           </InfoCard>
         </ShishWindow>
 
@@ -176,7 +176,7 @@ export default function ProjectsScene() {
             <p style={{ margin: 0, fontSize: "14px", fontStyle: "italic" }}>
               <strong>Highlight:</strong> Implemented TFT display config and a Dino game in ARM assembly, meticulously optimizing embedded memory.
             </p>
-            <GitHubLink url="https://github.com/Ali-Said1/Bitboy" />
+            <GitHubLink url="https://github.com/The-Naggar/Bitboy" />
           </InfoCard>
         </ShishWindow>
 
@@ -193,7 +193,7 @@ export default function ProjectsScene() {
             <p style={{ margin: 0, fontSize: "14px", fontStyle: "italic" }}>
               <strong>Highlight:</strong> Engineered an auto-framing Pan/Tilt physical gimbal steered via UDP based on edge ML inference.
             </p>
-            <GitHubLink url="https://github.com/The-Naggar/Tri-Track" />
+            <GitHubLink url="https://github.com/The-Naggar/app-Tri-track" />
           </InfoCard>
         </ShishWindow>
 
@@ -209,7 +209,7 @@ export default function ProjectsScene() {
             <p style={{ margin: 0, fontSize: "14px", fontStyle: "italic" }}>
               <strong>Highlight:</strong> Architected robust FSM logic for prioritization and seamless process life-cycle management.
             </p>
-            <GitHubLink url="https://github.com/The-Naggar" />
+            <GitHubLink url="https://github.com/The-Naggar/os-process-scheduler" />
           </InfoCard>
         </ShishWindow>
 
